@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Card Catalog — Library Records</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#1F3A2E;
+    --ink-deep:#142720;
+    --parchment:#EDE6D6;
+    --gold:#C9A227;
+    --gold-dim:#9C8030;
+    --burgundy:#7A3030;
+    --line:#3E5B4A;
+    --card:#F6F1E4;
+    --shadow:rgba(20,39,32,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--ink-deep);
+    background-image:
+      radial-gradient(circle at 10% 0%, rgba(201,162,39,0.07), transparent 40%),
+      radial-gradient(circle at 90% 100%, rgba(201,162,39,0.05), transparent 40%);
+    color:var(--parchment);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:0 0 60px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+
+  /* ---------- lock screen ---------- */
+  #lock-screen{
+    position:fixed; inset:0;
+    background:var(--ink-deep);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:24px;
+  }
+  .lock-card{
+    background:var(--card);
+    color:var(--ink-deep);
+    border-radius:6px;
+    padding:36px 32px;
+    max-width:380px;
+    width:100%;
+    box-shadow:0 24px 60px var(--shadow);
+    border:1px solid #d9cda4;
+    text-align:center;
+  }
+  .lock-card .eyebrow{display:block; margin-bottom:14px;}
+  .lock-card h2{
+    font-family:'Playfair Display', serif;
+    font-size:24px;
+    margin:0 0 6px;
+    color:var(--ink);
+  }
+  .lock-card p.hint{
+    font-size:13px;
+    color:#6b6450;
+    margin:0 0 20px;
+  }
+  .lock-card input[type=password]{
+    width:100%;
+    padding:12px 14px;
+    text-align:center;
+    letter-spacing:0.3em;
+    font-size:18px;
+    border:1px solid #c9bb8e;
+    border-radius:3px;
+    background:#fffdf7;
+    margin-bottom:10px;
+  }
+  .lock-card .lock-error{
+    color:var(--burgundy);
+    font-size:13px;
+    min-height:18px;
+    margin-bottom:6px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .lock-card button{width:100%; margin-top:6px;}
+
+  #app{ display:none; }
+
+  header{
+    padding:48px 24px 32px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, var(--ink) 0%, var(--ink-deep) 100%);
+    position:relative;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    font-size:11px;
+    color:var(--gold);
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:'Playfair Display', serif;
+    font-weight:700;
+    font-size:clamp(32px,5vw,52px);
+    margin:0 0 8px;
+    letter-spacing:0.01em;
+  }
+  header p.sub{
+    font-style:italic;
+    color:#CFC6AE;
+    font-family:'Playfair Display', serif;
+    font-size:16px;
+    margin:0;
+  }
+  .header-actions{
+    position:absolute;
+    top:24px; right:24px;
+    display:flex;
+    gap:10px;
+  }
+  .header-actions button{
+    background:transparent;
+    border:1px solid var(--gold-dim);
+    color:var(--gold);
+    font-size:12px;
+    padding:7px 14px;
+  }
+  .header-actions button:hover{background:rgba(201,162,39,0.12);}
+
+  .settings-overlay{
+    position:fixed; inset:0;
+    background:rgba(20,30,25,0.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:60;
+  }
+  .settings-card{
+    background:var(--card);
+    color:var(--ink-deep);
+    max-width:420px;
+    width:90%;
+    padding:28px 26px;
+    border-radius:4px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.35);
+  }
+  .settings-card h3{
+    font-family:'Playfair Display', serif;
+    margin:0 0 18px;
+    font-size:22px;
+  }
+  .settings-toggle{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    cursor:pointer;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    margin-bottom:10px;
+  }
+  .settings-toggle input{margin-top:3px;}
+  .settings-card p.hint{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:12.5px;
+    color:#5a5340;
+    margin:0 0 20px;
+  }
+  .settings-card button.primary{width:100%;}
+
+  /* remove (✕) button on saved record cards is opt-in via Settings */
+  .record .remove{ display:none; }
+  body.show-remove-buttons .record .remove{ display:block; }
+
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    padding:36px 24px 0;
+  }
+
+  .drawer{
+    background:var(--card);
+    color:var(--ink-deep);
+    border-radius:4px;
+    padding:28px 28px 24px;
+    box-shadow:0 18px 40px var(--shadow);
+    border:1px solid #d9cda4;
+    position:relative;
+    margin-bottom:40px;
+  }
+  .drawer::before{
+    content:"";
+    position:absolute;
+    top:0; left:24px; right:24px; height:6px;
+    background:var(--gold);
+    border-radius:0 0 3px 3px;
+  }
+  .drawer h2{
+    font-family:'Playfair Display', serif;
+    font-size:22px;
+    margin:14px 0 18px;
+    color:var(--ink);
+  }
+  .drawer h3{
+    font-family:'Playfair Display', serif;
+    font-size:16px;
+    margin:0 0 12px;
+    color:var(--ink);
+  }
+
+  .field-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:14px;
+  }
+  @media (max-width:640px){ .field-row{grid-template-columns:1fr;} }
+
+  label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--gold-dim);
+    margin-bottom:6px;
+  }
+  input[type=text], input[type=date], input[type=password], select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid #c9bb8e;
+    border-radius:3px;
+    background:#fffdf7;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    color:var(--ink-deep);
+  }
+  input:focus, select:focus, button:focus{
+    outline:2px solid var(--burgundy);
+    outline-offset:2px;
+  }
+
+  /* ---------- books block ---------- */
+  .books-block{
+    margin:18px 0 20px;
+    padding:16px;
+    border:1px dashed #c9bb8e;
+    border-radius:4px;
+    background:#fbf7ea;
+  }
+  .book-row{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr auto;
+    gap:10px;
+    align-items:end;
+    margin-bottom:12px;
+    padding-bottom:12px;
+    border-bottom:1px solid #e3d8b3;
+  }
+  .book-row:last-of-type{ border-bottom:none; margin-bottom:4px; padding-bottom:0; }
+  @media (max-width:760px){ .book-row{grid-template-columns:1fr; } }
+  .book-row .mini-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--gold-dim);
+    margin-bottom:4px;
+    display:block;
+  }
+  .book-row .remove-book{
+    background:transparent;
+    border:1px solid var(--burgundy);
+    color:var(--burgundy);
+    padding:9px 10px;
+    font-size:13px;
+    height:fit-content;
+  }
+  .book-row .remove-book:hover{ background:rgba(122,48,48,0.08); }
+  .add-book-btn{ margin-top:4px; }
+  .books-block-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:4px;
+  }
+  .add-subject-btn{
+    border-color:var(--burgundy);
+    color:var(--burgundy);
+  }
+  .add-subject-btn:hover{ background:rgba(122,48,48,0.08); }
+  .subject-add-row{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+  }
+  .subject-add-row input{ flex:1; }
+  .subject-add-row button{ white-space:nowrap; padding:10px 16px; }
+
+  .actions{
+    display:flex;
+    gap:12px;
+    margin-top:8px;
+    flex-wrap:wrap;
+  }
+  button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:11px 20px;
+    border-radius:3px;
+    border:none;
+    cursor:pointer;
+  }
+  button.primary{ background:var(--ink); color:var(--parchment); }
+  button.primary:hover{ background:var(--ink-deep); }
+  button.ghost{ background:transparent; border:1px solid var(--ink); color:var(--ink); }
+  button.ghost:hover{ background:rgba(31,58,46,0.08); }
+
+  .error{
+    color:var(--burgundy);
+    font-size:13px;
+    margin-top:4px;
+    min-height:18px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  .filter-row{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:22px;
+  }
+  .filter-row label{margin-bottom:0;}
+  .filter-row .field{min-width:180px;}
+  .count-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--gold);
+    margin-left:auto;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(300px,1fr));
+    gap:18px;
+  }
+  .record{
+    background:var(--card);
+    color:var(--ink-deep);
+    border-radius:3px;
+    padding:18px 18px 16px;
+    box-shadow:0 10px 24px var(--shadow);
+    border:1px solid #d9cda4;
+    position:relative;
+    animation:rise .35s ease both;
+  }
+  @keyframes rise{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .record::before{
+    content:"";
+    position:absolute;
+    top:10px; left:50%;
+    width:34px; height:7px;
+    margin-left:-17px;
+    border-radius:6px;
+    background:#d9cda4;
+    box-shadow:inset 0 0 0 1px #c2b387;
+  }
+  .record .name{
+    font-family:'Playfair Display', serif;
+    font-weight:700;
+    font-size:18px;
+    margin:16px 0 2px;
+    color:var(--ink);
+  }
+  .record .class{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--gold-dim);
+    margin-bottom:12px;
+  }
+  .book-tile{
+    background:#fffdf7;
+    border:1px solid #e3d8b3;
+    border-radius:4px;
+    padding:9px 11px;
+    margin-bottom:8px;
+    position:relative;
+  }
+  .book-tile .remove-book-tile{
+    position:absolute;
+    top:6px; right:6px;
+    background:none;
+    border:none;
+    color:#b2a373;
+    font-size:13px;
+    line-height:1;
+    padding:3px 5px;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    display:none;
+  }
+  body.show-remove-buttons .book-tile .remove-book-tile{ display:block; }
+  .book-tile .remove-book-tile:hover{ color:var(--burgundy); }
+  .book-tile .b-title{
+    font-weight:600;
+    font-size:13.5px;
+    color:var(--ink);
+  }
+  .book-tile .b-meta{
+    font-size:12px;
+    color:#6b6450;
+    margin-top:2px;
+  }
+  .book-tile .b-subject{
+    display:inline-block;
+    margin-top:6px;
+    font-size:10.5px;
+    padding:2px 8px;
+    border-radius:9px;
+    background:var(--ink);
+    color:var(--parchment);
+  }
+  .record .meta-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12.5px;
+    margin-top:10px;
+  }
+  .record .meta-table td{
+    padding:3px 0;
+    border-top:1px solid #e3d8b3;
+    vertical-align:top;
+  }
+  .record .meta-table td.k{
+    color:var(--gold-dim);
+    font-family:'IBM Plex Mono', monospace;
+    width:78px;
+  }
+  .status{
+    display:inline-block;
+    margin-top:10px;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:4px 10px;
+    border-radius:3px;
+  }
+  .status.returned{background:#e1ecdf; color:#2c5a3e;}
+  .status.issued{background:#f5e3c9; color:#8a5a13;}
+  .status.overdue{background:#f3d9d9; color:var(--burgundy);}
+
+  .record .remove{
+    position:absolute;
+    top:10px; right:10px;
+    background:none;
+    border:none;
+    color:#b2a373;
+    font-size:16px;
+    padding:4px 6px;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .record .remove:hover{color:var(--burgundy);}
+  .card-footer-actions{
+    margin-top:14px;
+    padding-top:10px;
+    border-top:1px solid #e3d8b3;
+  }
+  .card-footer-actions button{
+    width:100%;
+    font-size:12.5px;
+    padding:8px 10px;
+  }
+
+  .empty{
+    text-align:center;
+    padding:60px 20px;
+    color:#bdb497;
+    font-family:'Playfair Display', serif;
+    font-style:italic;
+    font-size:18px;
+    border:1px dashed var(--line);
+    border-radius:4px;
+  }
+
+  footer{
+    text-align:center;
+    color:#8c8466;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    margin-top:50px;
+    line-height:1.6;
+  }
+
+  /* ---------- change-code modal ---------- */
+  #code-modal-backdrop{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:200;
+    padding:24px;
+  }
+  #code-modal{
+    background:var(--card);
+    color:var(--ink-deep);
+    border-radius:6px;
+    padding:28px;
+    max-width:360px;
+    width:100%;
+  }
+  #code-modal h3{
+    font-family:'Playfair Display', serif;
+    margin:0 0 16px;
+  }
+  #code-modal label{margin-top:10px;}
+</style>
+</head>
+<body>
+
+<div id="lock-screen">
+  <div class="lock-card">
+    <span class="eyebrow" style="text-align:center;">Private catalog</span>
+    <h2 id="lock-title">Enter your access code</h2>
+    <p class="hint" id="lock-hint">This catalog is locked to a code only you set.</p>
+    <input type="password" id="lock-input" placeholder="••••" inputmode="numeric" autocomplete="off">
+    <div class="lock-error" id="lock-error">&nbsp;</div>
+    <button class="primary" id="lock-submit" type="button">Unlock</button>
+  </div>
+</div>
+
+<div id="code-modal-backdrop">
+  <div id="code-modal">
+    <h3>Change access code</h3>
+    <label for="cm-current">Current code</label>
+    <input type="password" id="cm-current" autocomplete="off">
+    <label for="cm-new">New code</label>
+    <input type="password" id="cm-new" autocomplete="off">
+    <label for="cm-confirm">Confirm new code</label>
+    <input type="password" id="cm-confirm" autocomplete="off">
+    <div class="error" id="cm-error">&nbsp;</div>
+    <div class="actions">
+      <button class="primary" id="cm-save" type="button">Save</button>
+      <button class="ghost" id="cm-cancel" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+<header>
+  <div class="header-actions">
+    <button id="settings-btn" type="button">Settings</button>
+    <button id="change-code-btn" type="button">Change code</button>
+  </div>
+  <p class="eyebrow">Issue · Return · Track</p>
+  <h1>The Card Catalog</h1>
+  <p class="sub">A drawer of every book on loan, sorted by hand.</p>
+</header>
+
+<div id="settings-overlay" class="settings-overlay" style="display:none;">
+  <div class="settings-card">
+    <h3>Settings</h3>
+    <label class="settings-toggle">
+      <input type="checkbox" id="setting-show-remove">
+      <span>Show quick remove (✕) buttons on records and individual books</span>
+    </label>
+    <p class="hint">Off by default to avoid accidental deletions. Turn this on to add one-click delete buttons to the top-right corner of every saved record and to each book within it.</p>
+    <button id="settings-close-btn" type="button" class="primary">Done</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="drawer">
+    <h2 id="drawer-title">File a new record</h2>
+    <div class="error" id="edit-banner" style="display:none; color:var(--burgundy); background:#f3d9d9; padding:8px 12px; border-radius:3px; margin-bottom:12px; font-family:'IBM Plex Sans', sans-serif;">Editing an existing record — add or remove books below, then update.</div>
+    <div class="field-row">
+      <div>
+        <label for="f-name">Student name</label>
+        <input type="text" id="f-name" placeholder="e.g. Dipesh Singh">
+      </div>
+      <div>
+        <label for="f-class">Class</label>
+        <select id="f-class">
+          <option value="">Select class</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div>
+        <label for="f-stream">Stream</label>
+        <select id="f-stream"></select>
+      </div>
+      <div id="stream-custom-wrap" style="display:none;">
+        <label for="f-stream-custom">Custom stream name</label>
+        <input type="text" id="f-stream-custom" placeholder="e.g. Hotel Management">
+      </div>
+    </div>
+
+    <div class="books-block">
+      <h3>Books on this loan</h3>
+      <div id="book-rows"></div>
+      <div class="books-block-actions">
+        <button class="ghost add-book-btn" id="add-book-btn" type="button">+ Add another book</button>
+        <button class="ghost add-subject-btn" id="add-subject-btn" type="button">+ Add a new subject</button>
+      </div>
+      <div id="subject-add-row" class="subject-add-row" style="display:none;">
+        <input type="text" id="new-subject-input" placeholder="e.g. Biology">
+        <button class="primary" id="subject-add-confirm" type="button">Add</button>
+        <button class="ghost" id="subject-add-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div>
+        <label for="f-status">Status</label>
+        <select id="f-status">
+          <option value="issued">Issued</option>
+          <option value="returned">Returned</option>
+          <option value="overdue">Overdue</option>
+        </select>
+      </div>
+      <div></div>
+    </div>
+
+    <div class="error" id="form-error">&nbsp;</div>
+
+    <div class="actions">
+      <button class="primary" id="save-btn" type="button">Add record</button>
+      <button class="ghost" id="clear-btn" type="button">Clear form</button>
+      <button class="ghost" id="cancel-edit-btn" type="button" style="display:none; border-color:var(--burgundy); color:var(--burgundy);">Cancel edit</button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <div class="field">
+      <label for="filter-name">Search by name</label>
+      <input type="text" id="filter-name" placeholder="Student name">
+    </div>
+    <div class="field">
+      <label for="filter-class">Filter by class</label>
+      <select id="filter-class">
+        <option value="">All classes</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="filter-stream">Filter by stream</label>
+      <select id="filter-stream"><option value="">All streams</option></select>
+    </div>
+    <div class="field">
+      <label for="filter-subject">Filter by subject</label>
+      <select id="filter-subject"><option value="">All subjects</option></select>
+    </div>
+    <div class="field">
+      <label for="filter-status">Filter by status</label>
+      <select id="filter-status">
+        <option value="">All statuses</option>
+        <option value="issued">Issued</option>
+        <option value="returned">Returned</option>
+        <option value="overdue">Overdue</option>
+      </select>
+    </div>
+    <div class="count-tag" id="result-count"></div>
+  </div>
+
+  <div id="grid" class="grid"></div>
+
+</div>
+
+<footer>Drawer contents saved automatically · locked behind your access code</footer>
+</div>
+
+<script>
+const DEFAULT_SUBJECTS = ["Physics","Chemistry","Biology","Mathematics","English","Computer Science"];
+const DEFAULT_STREAMS = ["Science","Management","Humanities","Law","Other"];
+const STORAGE_KEY = "records-v2";
+const SUBJ_KEY = "subject-list-v1";
+const STREAM_KEY = "stream-list-v1";
+const CODE_KEY = "access-code-v1";
+
+let records = [];
+let subjectList = [...DEFAULT_SUBJECTS];
+let streamList = DEFAULT_STREAMS.slice(0, -1); // keep "Other" handled separately in the dropdown render
+let bookRowCount = 0;
+let editingId = null;
+
+const seedFromUpload = [
+  {
+    name:"Dipesh Singh", cls:"12", stream:"Science",
+    books:[
+      {subject:"Physics", title:"Principles of Physics", author:"Dipesh Kumar Singh"},
+      {subject:"Chemistry", title:"Chemistry", author:"Dipesh"}
+    ],
+    issue:"2026-06-24", ret:"2026-06-27", status:"returned"
+  }
+];
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function fmtDate(d){
+  if(!d) return "—";
+  const dt = new Date(d + "T00:00:00");
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString(undefined, {day:"2-digit", month:"short", year:"numeric"});
+}
+
+/* ---------------- storage (window.storage when available, else localStorage) ---------------- */
+let storageWarningShown = false;
+
+function warnNoStorage(){
+  if(!storageWarningShown){
+    storageWarningShown = true;
+    const hintEl = document.getElementById("lock-hint");
+    if(hintEl){
+      hintEl.textContent = "Heads up: using this browser's local storage to save records on this device.";
+    }
+  }
+}
+
+function localGet(key){
+  try{
+    const v = localStorage.getItem(key);
+    return v === null ? null : v;
+  }catch(e){
+    return null;
+  }
+}
+function localSet(key, value){
+  try{
+    localStorage.setItem(key, value);
+  }catch(e){
+    /* storage unavailable (e.g. private browsing with storage disabled) — nothing more we can do */
+  }
+}
+
+async function safeGet(key){
+  try{
+    if(!window.storage) throw new Error("no storage");
+    const r = await window.storage.get(key, false);
+    return r ? r.value : null;
+  }catch(e){
+    warnNoStorage();
+    return localGet(key);
+  }
+}
+async function safeSet(key, value){
+  try{
+    if(!window.storage) throw new Error("no storage");
+    await window.storage.set(key, value, false);
+  }catch(e){
+    warnNoStorage();
+    localSet(key, value);
+  }
+}
+
+async function loadData(){
+  const raw = await safeGet(STORAGE_KEY);
+  records = raw ? JSON.parse(raw) : null;
+  if(!records){
+    records = seedFromUpload.map(s => ({id:uid(), ...s}));
+    await persistRecords();
+  }
+  const rawSubj = await safeGet(SUBJ_KEY);
+  if(rawSubj) subjectList = JSON.parse(rawSubj);
+  const rawStream = await safeGet(STREAM_KEY);
+  if(rawStream) streamList = JSON.parse(rawStream);
+  records.forEach(rec => (rec.books || []).forEach(b => {
+    if(b.subject && !subjectList.includes(b.subject)) subjectList.push(b.subject);
+  }));
+  records.forEach(rec => {
+    if(rec.stream && !streamList.includes(rec.stream)) streamList.push(rec.stream);
+  });
+}
+async function persistRecords(){
+  await safeSet(STORAGE_KEY, JSON.stringify(records));
+}
+async function persistSubjects(){
+  await safeSet(SUBJ_KEY, JSON.stringify(subjectList));
+}
+async function persistStreams(){
+  await safeSet(STREAM_KEY, JSON.stringify(streamList));
+}
+
+/* ---------------- lock screen ---------------- */
+async function getStoredCode(){
+  const raw = await safeGet(CODE_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+async function setStoredCode(code){
+  await safeSet(CODE_KEY, JSON.stringify(code));
+}
+
+let isFirstRun = false;
+
+async function initLock(){
+  const stored = await getStoredCode();
+  const titleEl = document.getElementById("lock-title");
+  const hintEl = document.getElementById("lock-hint");
+  const input = document.getElementById("lock-input");
+  const errEl = document.getElementById("lock-error");
+
+  if(!stored){
+    isFirstRun = true;
+    titleEl.textContent = "Set up an access code";
+    hintEl.textContent = "Choose a code (4+ characters). You'll need it every time you open this catalog.";
+  } else {
+    isFirstRun = false;
+    titleEl.textContent = "Enter your access code";
+    hintEl.textContent = "This catalog is locked to a code only you set.";
+  }
+
+  document.getElementById("lock-submit").onclick = async () => {
+    const val = input.value.trim();
+    try{
+      if(isFirstRun){
+        if(val.length < 4){ errEl.textContent = "Use at least 4 characters."; return; }
+        await setStoredCode(val);
+        unlockApp();
+      } else {
+        const current = await getStoredCode();
+        if(val === current){ unlockApp(); }
+        else{ errEl.textContent = "That code didn't match. Try again."; input.value = ""; }
+      }
+    }catch(err){
+      errEl.textContent = "Something went wrong unlocking. Please try again.";
+      console.error(err);
+    }
+  };
+  input.addEventListener("keydown", e => { if(e.key === "Enter") document.getElementById("lock-submit").click(); });
+}
+
+function unlockApp(){
+  document.getElementById("lock-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+/* ---------------- change code modal ---------------- */
+document.getElementById("change-code-btn").addEventListener("click", () => {
+  document.getElementById("cm-current").value = "";
+  document.getElementById("cm-new").value = "";
+  document.getElementById("cm-confirm").value = "";
+  document.getElementById("cm-error").innerHTML = "&nbsp;";
+  document.getElementById("code-modal-backdrop").style.display = "flex";
+});
+document.getElementById("cm-cancel").addEventListener("click", () => {
+  document.getElementById("code-modal-backdrop").style.display = "none";
+});
+document.getElementById("cm-save").addEventListener("click", async () => {
+  const current = document.getElementById("cm-current").value;
+  const next = document.getElementById("cm-new").value;
+  const confirm = document.getElementById("cm-confirm").value;
+  const errEl = document.getElementById("cm-error");
+  try{
+    const stored = await getStoredCode();
+    if(current !== stored){ errEl.textContent = "Current code is incorrect."; return; }
+    if(next.length < 4){ errEl.textContent = "New code needs at least 4 characters."; return; }
+    if(next !== confirm){ errEl.textContent = "New code and confirmation don't match."; return; }
+    await setStoredCode(next);
+    document.getElementById("code-modal-backdrop").style.display = "none";
+  }catch(err){
+    errEl.textContent = "Something went wrong saving the new code.";
+    console.error(err);
+  }
+});
+
+function refreshSubjectDropdowns(selectValueOnLastRow){
+  const rows = document.querySelectorAll(".book-row");
+  rows.forEach((row, idx) => {
+    const select = row.querySelector(".book-subject");
+    const currentVal = select.value;
+    const optionsHtml = subjectList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    select.innerHTML = optionsHtml;
+    const isLast = idx === rows.length - 1;
+    if(isLast && selectValueOnLastRow){
+      select.value = selectValueOnLastRow;
+    } else if(subjectList.includes(currentVal)){
+      select.value = currentVal;
+    }
+  });
+}
+
+document.getElementById("add-subject-btn").addEventListener("click", () => {
+  document.getElementById("subject-add-row").style.display = "flex";
+  document.getElementById("new-subject-input").value = "";
+  document.getElementById("new-subject-input").focus();
+});
+document.getElementById("subject-add-cancel").addEventListener("click", () => {
+  document.getElementById("subject-add-row").style.display = "none";
+});
+async function confirmAddSubject(){
+  const input = document.getElementById("new-subject-input");
+  const val = input.value.trim();
+  if(!val) return;
+  const exists = subjectList.find(s => s.toLowerCase() === val.toLowerCase());
+  const finalSubject = exists || val;
+  if(!exists){
+    subjectList.push(val);
+    await persistSubjects();
+  }
+  refreshSubjectDropdowns(finalSubject);
+  renderFilterSubjects();
+  document.getElementById("subject-add-row").style.display = "none";
+}
+document.getElementById("subject-add-confirm").addEventListener("click", confirmAddSubject);
+document.getElementById("new-subject-input").addEventListener("keydown", e => {
+  if(e.key === "Enter"){ e.preventDefault(); confirmAddSubject(); }
+});
+
+/* ---------------- book rows in form ---------------- */
+function addBookRow(prefill){
+  bookRowCount++;
+  const id = "book-" + bookRowCount;
+  const wrap = document.getElementById("book-rows");
+  const row = document.createElement("div");
+  row.className = "book-row";
+  row.dataset.rowId = id;
+
+  const subjOptions = subjectList.map(s =>
+    `<option value="${escapeHtml(s)}" ${prefill && prefill.subject===s ? "selected":""}>${escapeHtml(s)}</option>`
+  ).join("");
+
+  row.innerHTML = `
+    <div>
+      <span class="mini-label">Subject</span>
+      <select class="book-subject">${subjOptions}</select>
+    </div>
+    <div>
+      <span class="mini-label">Book title</span>
+      <input type="text" class="book-title" placeholder="e.g. Principles of Physics" value="${prefill ? escapeHtml(prefill.title) : ''}">
+    </div>
+    <div>
+      <span class="mini-label">Author</span>
+      <input type="text" class="book-author" placeholder="e.g. Halliday & Resnick" value="${prefill ? escapeHtml(prefill.author) : ''}">
+    </div>
+    <button class="remove-book" type="button" title="Remove this book">✕</button>
+  `;
+  row.querySelector(".remove-book").addEventListener("click", () => {
+    if(document.getElementById("book-rows").children.length > 1){
+      row.remove();
+    }
+  });
+  wrap.appendChild(row);
+}
+
+function resetBookRows(){
+  document.getElementById("book-rows").innerHTML = "";
+  addBookRow();
+}
+
+function collectBooks(){
+  const rows = document.querySelectorAll(".book-row");
+  const books = [];
+  rows.forEach(row => {
+    const subject = row.querySelector(".book-subject").value;
+    const title = row.querySelector(".book-title").value.trim();
+    const author = row.querySelector(".book-author").value.trim();
+    if(title || author){
+      books.push({subject, title, author});
+    }
+  });
+  return books;
+}
+
+/* ---------------- filters / rendering ---------------- */
+function renderFilterSubjects(){
+  const sel = document.getElementById("filter-subject");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All subjects</option>';
+  subjectList.forEach(s => {
+    const o = document.createElement("option");
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+  sel.value = current;
+}
+
+function renderFilterStreams(){
+  const sel = document.getElementById("filter-stream");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All streams</option>';
+  streamList.forEach(s => {
+    const o = document.createElement("option");
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+  sel.value = current;
+}
+
+function renderStreamSelect(){
+  const sel = document.getElementById("f-stream");
+  sel.innerHTML = "";
+  streamList.forEach(s => {
+    const o = document.createElement("option");
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+  const otherOpt = document.createElement("option");
+  otherOpt.value = "__other__"; otherOpt.textContent = "Other (type below)";
+  sel.appendChild(otherOpt);
+}
+
+function renderGrid(){
+  const grid = document.getElementById("grid");
+  const nameFilter = document.getElementById("filter-name").value.trim().toLowerCase();
+  const classFilter = document.getElementById("filter-class").value.trim().toLowerCase();
+  const subjFilter = document.getElementById("filter-subject").value;
+  const streamFilter = document.getElementById("filter-stream").value;
+  const statusFilter = document.getElementById("filter-status").value;
+
+  let filtered = records.filter(r => {
+    if(nameFilter && !(r.name || "").toLowerCase().includes(nameFilter)) return false;
+    if(classFilter && !(r.cls || "").toLowerCase().includes(classFilter)) return false;
+    if(subjFilter && !(r.books || []).some(b => b.subject === subjFilter)) return false;
+    if(streamFilter && r.stream !== streamFilter) return false;
+    if(statusFilter && r.status !== statusFilter) return false;
+    return true;
+  });
+
+  document.getElementById("result-count").textContent = filtered.length + (filtered.length === 1 ? " record" : " records");
+
+  if(filtered.length === 0){
+    grid.innerHTML = '<div class="empty">No records here yet. File one above to fill the drawer.</div>';
+    return;
+  }
+
+  grid.innerHTML = "";
+  filtered.slice().reverse().forEach(r => {
+    const card = document.createElement("div");
+    card.className = "record";
+    const booksHtml = (r.books || []).map((b, i) => `
+      <div class="book-tile">
+        <button class="remove-book-tile" type="button" title="Remove this book" data-record-id="${r.id}" data-index="${i}">✕</button>
+        <div class="b-title">${escapeHtml(b.title || "Untitled")}</div>
+        <div class="b-meta">by ${escapeHtml(b.author || "Unknown author")}</div>
+        ${b.subject ? `<span class="b-subject">${escapeHtml(b.subject)}</span>` : ""}
+      </div>
+    `).join("");
+
+    const streamBit = r.stream ? ` · ${escapeHtml(r.stream)}` : "";
+
+    card.innerHTML = `
+      <button class="remove" title="Remove record" data-id="${r.id}">✕</button>
+      <div class="name">${escapeHtml(r.name)}</div>
+      <div class="class">CLASS ${escapeHtml(r.cls || "—")}${streamBit} · ${(r.books||[]).length} book${(r.books||[]).length===1?"":"s"}</div>
+      ${booksHtml}
+      <span class="status ${r.status}">${r.status}</span>
+      <div class="card-footer-actions">
+        <button class="ghost edit-record" type="button" data-id="${r.id}">Edit books / details</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll(".remove").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      records = records.filter(r => r.id !== btn.dataset.id);
+      await persistRecords();
+      renderGrid();
+    });
+  });
+
+  grid.querySelectorAll(".remove-book-tile").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const rec = records.find(r => r.id === btn.dataset.recordId);
+      if(!rec) return;
+      const idx = parseInt(btn.dataset.index, 10);
+      if(!rec.books || rec.books.length <= 1){
+        alert("A record needs at least one book — remove the whole record instead if it's no longer needed.");
+        return;
+      }
+      rec.books.splice(idx, 1);
+      await persistRecords();
+      renderGrid();
+    });
+  });
+
+  grid.querySelectorAll(".edit-record").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const rec = records.find(r => r.id === btn.dataset.id);
+      if(rec) startEdit(rec);
+    });
+  });
+}
+
+/* ---------------- form actions ---------------- */
+function setFormMode(mode){
+  const title = document.getElementById("drawer-title");
+  const banner = document.getElementById("edit-banner");
+  const saveBtn = document.getElementById("save-btn");
+  const cancelBtn = document.getElementById("cancel-edit-btn");
+  if(mode === "edit"){
+    title.textContent = "Edit record";
+    banner.style.display = "block";
+    saveBtn.textContent = "Update record";
+    cancelBtn.style.display = "inline-block";
+  } else {
+    title.textContent = "File a new record";
+    banner.style.display = "none";
+    saveBtn.textContent = "Add record";
+    cancelBtn.style.display = "none";
+  }
+}
+
+function clearForm(){
+  document.getElementById("f-name").value = "";
+  document.getElementById("f-class").value = "";
+  document.getElementById("f-status").value = "issued";
+  renderStreamSelect();
+  document.getElementById("f-stream-custom").value = "";
+  document.getElementById("stream-custom-wrap").style.display = "none";
+  resetBookRows();
+  document.getElementById("form-error").innerHTML = "&nbsp;";
+  editingId = null;
+  setFormMode("add");
+}
+
+function startEdit(rec){
+  editingId = rec.id;
+  setFormMode("edit");
+
+  document.getElementById("f-name").value = rec.name || "";
+  document.getElementById("f-class").value = rec.cls || "";
+  document.getElementById("f-status").value = rec.status || "issued";
+
+  renderStreamSelect();
+  const streamSel = document.getElementById("f-stream");
+  if(rec.stream && streamList.includes(rec.stream)){
+    streamSel.value = rec.stream;
+    document.getElementById("stream-custom-wrap").style.display = "none";
+  } else if(rec.stream){
+    streamSel.value = "__other__";
+    document.getElementById("f-stream-custom").value = rec.stream;
+    document.getElementById("stream-custom-wrap").style.display = "block";
+  }
+
+  document.getElementById("book-rows").innerHTML = "";
+  if(rec.books && rec.books.length){
+    rec.books.forEach(b => addBookRow(b));
+  } else {
+    addBookRow();
+  }
+
+  document.getElementById("form-error").innerHTML = "&nbsp;";
+  document.querySelector(".drawer").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+async function getSelectedStream(){
+  const sel = document.getElementById("f-stream").value;
+  if(sel === "__other__"){
+    const custom = document.getElementById("f-stream-custom").value.trim();
+    if(custom && !streamList.includes(custom)){
+      streamList.push(custom);
+      await persistStreams();
+      renderFilterStreams();
+    }
+    return custom;
+  }
+  return sel;
+}
+
+async function saveRecord(){
+  const name = document.getElementById("f-name").value.trim();
+  const cls = document.getElementById("f-class").value.trim();
+  const status = document.getElementById("f-status").value;
+  const errorEl = document.getElementById("form-error");
+  const books = collectBooks();
+  const stream = await getSelectedStream();
+
+  if(!name){ errorEl.textContent = "Add the student's name before filing this record."; return; }
+  if(books.length === 0){ errorEl.textContent = "Add at least one book (title or author) for this loan."; return; }
+
+  errorEl.innerHTML = "&nbsp;";
+
+  if(editingId){
+    const idx = records.findIndex(r => r.id === editingId);
+    if(idx !== -1){
+      records[idx] = { ...records[idx], name, cls, stream, books, status };
+    }
+  } else {
+    records.push({ id: uid(), name, cls, stream, books, status });
+  }
+
+  await persistRecords();
+  clearForm();
+  renderFilterSubjects();
+  renderFilterStreams();
+  renderGrid();
+}
+
+document.getElementById("f-stream").addEventListener("change", e => {
+  document.getElementById("stream-custom-wrap").style.display = e.target.value === "__other__" ? "block" : "none";
+});
+document.getElementById("add-book-btn").addEventListener("click", () => addBookRow());
+document.getElementById("save-btn").addEventListener("click", saveRecord);
+document.getElementById("clear-btn").addEventListener("click", clearForm);
+document.getElementById("cancel-edit-btn").addEventListener("click", clearForm);
+document.getElementById("filter-name").addEventListener("input", renderGrid);
+document.getElementById("filter-class").addEventListener("change", renderGrid);
+document.getElementById("filter-subject").addEventListener("change", renderGrid);
+document.getElementById("filter-stream").addEventListener("change", renderGrid);
+document.getElementById("filter-status").addEventListener("change", renderGrid);
+
+document.getElementById("settings-btn").addEventListener("click", async () => {
+  const overlay = document.getElementById("settings-overlay");
+  const checkbox = document.getElementById("setting-show-remove");
+  checkbox.checked = document.body.classList.contains("show-remove-buttons");
+  overlay.style.display = "flex";
+});
+document.getElementById("settings-close-btn").addEventListener("click", () => {
+  document.getElementById("settings-overlay").style.display = "none";
+});
+document.getElementById("setting-show-remove").addEventListener("change", async (e) => {
+  document.body.classList.toggle("show-remove-buttons", e.target.checked);
+  await safeSet("setting-show-remove", e.target.checked ? "1" : "0");
+});
+
+(async function init(){
+  await initLock();
+  await loadData();
+  const showRemove = await safeGet("setting-show-remove");
+  document.body.classList.toggle("show-remove-buttons", showRemove === "1");
+  resetBookRows();
+  renderStreamSelect();
+  renderFilterSubjects();
+  renderFilterStreams();
+  renderGrid();
+})();
+</script>
+</body>
+</html>
